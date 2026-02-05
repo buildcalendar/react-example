@@ -5,6 +5,9 @@ import "@schedule-x/theme-default/dist/index.css";
 import "@sx-premium/interactive-event-modal/index.css";
 import "./App.css";
 import CalendarView from "./CalendarView";
+import ApiKeyWarning from "./components/ApiKeyWarning";
+import ConnectGoogleButton from "./components/ConnectGoogleButton";
+import CalendarEmptyState from "./components/CalendarEmptyState";
 
 type CalendarPickerProps = {
   calendars: CalendarWithEvents[];
@@ -116,19 +119,7 @@ function FullStackCalendar() {
     <div style={{ padding: "2rem" }}>
       <h1>BuildCalendar Full Stack Example</h1>
       
-      {!apiKey && (
-        <div style={{ 
-          padding: "1rem", 
-          backgroundColor: "#fff3cd", 
-          border: "1px solid #ffc107",
-          borderRadius: "4px",
-          marginBottom: "1rem"
-        }}>
-          <strong>⚠️ Missing API Key</strong>
-          <p>Please create a <code>.env</code> file with:</p>
-          <code>VITE_BUILDCALENDAR_API_KEY=your_api_key_here</code>
-        </div>
-      )}
+      {!apiKey && <ApiKeyWarning />}
       
       <div
         style={{
@@ -139,19 +130,7 @@ function FullStackCalendar() {
           flexWrap: "wrap",
         }}
       >
-        <button
-          onClick={connectGoogle}
-          style={{
-            padding: "0.5rem 1rem",
-            backgroundColor: "#4285f4",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            cursor: "pointer",
-          }}
-        >
-          Connect Google Calendar
-        </button>
+        <ConnectGoogleButton onClick={connectGoogle} />
 
         <CalendarPicker
           calendars={calendars}
@@ -163,13 +142,7 @@ function FullStackCalendar() {
 
       {error && <p style={{ color: "red" }}>{error}</p>}
 
-      {!selectedCalendar && (
-        <p>
-          {isLoadingCalendars
-            ? "Loading calendars..."
-            : "Connect your Google Calendar and choose a calendar to render it."}
-        </p>
-      )}
+      {!selectedCalendar && <CalendarEmptyState isLoading={isLoadingCalendars} />}
 
       {selectedCalendar && (
         <CalendarView 
