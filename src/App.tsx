@@ -8,6 +8,7 @@ import CalendarView from "./CalendarView";
 import ApiKeyWarning from "./components/ApiKeyWarning";
 import ConnectGoogleButton from "./components/ConnectGoogleButton";
 import CalendarEmptyState from "./components/CalendarEmptyState";
+import { useGoogleOAuth } from "./hooks/useGoogleOAuth";
 
 type CalendarPickerProps = {
   calendars: CalendarWithEvents[];
@@ -46,28 +47,32 @@ function CalendarPicker({
 
 function FullStackCalendar() {
   const apiKey = import.meta.env.VITE_BUILDCALENDAR_API_KEY!;
-  const externalUserId = "some-user-1"; // Replace with your user ID
-  const baseUrl = 'https://buildcalendar.com/api/v1'; // Use SDK default. Set to custom URL only for local dev (e.g. "http://localhost:5173/api/v1")
+  const baseUrl = undefined; // e.g. "http://localhost:5173/api/v1"
 
   const client = useMemo(
     () => createClient({ apiKey, baseUrl }),
     [apiKey, baseUrl],
   );
 
+  const { externalUserId, isSigningIn, error: oauthError, startGoogleSignIn } =
+    useGoogleOAuth({ client, callbackPath: "/google/callback" });
+
   const [calendars, setCalendars] = useState<CalendarWithEvents[]>([]);
   const [selectedCalendarId, setSelectedCalendarId] = useState<string | null>(
     null,
   );
   const [isLoadingCalendars, setIsLoadingCalendars] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [calendarError, setCalendarError] = useState<string | null>(null);
 
   // Fetch calendars for the user
   useEffect(() => {
+    if (!externalUserId) return;
+
     let cancelled = false;
 
     async function run() {
       setIsLoadingCalendars(true);
-      setError(null);
+      setCalendarError(null);
       try {
         const data = await client.calendars.byUser(externalUserId, {
           sync: true,
@@ -78,7 +83,7 @@ function FullStackCalendar() {
         setSelectedCalendarId((prev) => prev ?? data[0]?.id ?? null);
       } catch (e) {
         if (cancelled) return;
-        setError(e instanceof Error ? e.message : String(e));
+        setCalendarError(e instanceof Error ? e.message : String(e));
       } finally {
         if (!cancelled) setIsLoadingCalendars(false);
       }
@@ -94,63 +99,70 @@ function FullStackCalendar() {
     c.id === selectedCalendarId
   ) ?? null;
 
-  // Function to initiate Google OAuth
-  async function connectGoogle() {
-    try {
-      const callbackUrl = 'http://localhost:5175/google/callback'
-      
-      const { url } = await client.google.getAuthUrl({
-        externalUserId,
-        callbackUrl,
-      });
-      
-      console.log('Received auth URL:', url);
-      window.location.href = url;
-    } catch (e) {
-      console.error('Google OAuth error:', e);
-      const errorMessage = e instanceof Error 
-        ? `${e.message}${e.cause ? ` (${JSON.stringify(e.cause)})` : ''}` 
-        : String(e);
-      setError(errorMessage);
-    }
+  if (!externalUserId) {
+    return (
+      <div style={{ padding: "2rem", textAlign: "center" }}>
+        <h1>Connect your Google Calendar</h1>
+        <p style={{ marginBottom: "1.5rem" }}>
+          Sign in with Google to view and manage your calendars
+        </p>
+        <button
+          onClick={startGoogleSignIn}
+          disabled={isSigningIn}
+          style={{
+            padding: "0.75rem 1.5rem",
+            fontSize: "1rem",
+            background: "#4285f4",
+            color: "white",
+            border: "none",
+            borderRadius: "0.5rem",
+            cursor: isSigningIn ? "not-allowed" : "pointer",
+          }}
+        >
+          {isSigningIn ? "Signing in..." : "Sign in with Google"}
+        </button>
+        {oauthError && <p style={{ color: "red", marginTop: "1rem" }}>{oauthError}</p>}
+      </div>
+    );
   }
 
   return (
-    <div style={{ padding: "2rem" }}>
-      <h1>BuildCalendar Full Stack Example</h1>
-      
-      {!apiKey && <ApiKeyWarning />}
-      
-      <div
-        style={{
-          marginBottom: "1rem",
-          display: "flex",
-          gap: "1rem",
-          alignItems: "center",
-          flexWrap: "wrap",
-        }}
-      >
-        <ConnectGoogleButton onClick={connectGoogle} />
-
+    <div style={{ padding: "1rem" }}>
+      <div style={{ marginBottom: "1rem", display: "flex", gap: "1rem" }}>
         <CalendarPicker
           calendars={calendars}
           selectedCalendarId={selectedCalendarId}
           isLoadingCalendars={isLoadingCalendars}
           onChange={(id) => setSelectedCalendarId(id)}
         />
+        <p style={{ margin: 0, color: "#059669", fontWeight: "bold" }}>
+          Interactive
+        </p>
       </div>
 
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      {calendarError && <p style={{ color: "red" }}>{calendarError}</p>}
 
-      {!selectedCalendar && <CalendarEmptyState isLoading={isLoadingCalendars} />}
+      {!selectedCalendar && (
+        <p>
+          {isLoadingCalendars
+            ? "Loading calendars..."
+            : "Choose a calendar to render it."}
+        </p>
+      )}
 
       {selectedCalendar && (
-        <CalendarView 
-          key={selectedCalendar.id}
-          calendar={selectedCalendar}
-          apiKey={apiKey}
-          baseUrl={baseUrl}
-        />
+        <div>
+          <p style={{ marginBottom: "1rem", color: "#6b7280", fontSize: "0.875rem" }}>
+            Double-click on any date/time to create an event. Click events to edit/delete.
+          </p>
+          <CalendarView 
+            key={selectedCalendar.id}
+            calendar={selectedCalendar}
+            apiKey={apiKey}
+            baseUrl={baseUrl}
+            client={client}
+          />
+        </div>
       )}
     </div>
   );

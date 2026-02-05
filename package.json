@@ -10,9 +10,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@buildcalendar/schedule-x": "^0.1.0-alpha.2",
+    "@buildcalendar/schedule-x": "^0.1.0-alpha.3",
     "@buildcalendar/sdk": "^0.1.0-alpha.5",
     "@schedule-x/calendar": "^4.1.0",
+    "@schedule-x/event-recurrence": "^4.1.0",
     "@schedule-x/react": "^4.1.0",
     "@schedule-x/theme-default": "^4.1.0",
     "@sx-premium/interactive-event-modal": "^15.1.2",

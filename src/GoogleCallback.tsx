@@ -11,12 +11,14 @@ export default function GoogleCallback() {
     const externalUserId = params.get("external_user_id");
 
     if (success === "true" && externalUserId) {
+      // Store userId in localStorage so it persists
+      localStorage.setItem("buildcalendar_external_user_id", externalUserId);
       setStatus("success");
       setMessage(`Successfully connected Google Calendar for user ${externalUserId}`);
       
-      // Redirect back to home after 2 seconds
+      // Redirect back to home with query params so the hook can read them
       setTimeout(() => {
-        window.location.href = "/";
+        window.location.href = `/?success=true&external_user_id=${externalUserId}`;
       }, 2000);
     } else if (error) {
       setStatus("error");
